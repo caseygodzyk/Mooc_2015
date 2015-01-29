@@ -6,6 +6,8 @@ import edu.wpi.first.wpilibj.RobotDrive;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.CANTalon;
 import edu.wpi.first.wpilibj.Ultrasonic;
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.Encoder;
 
 import com.usfirst.team5240.nav6.frc.IMUAdvanced;
 
@@ -44,6 +46,8 @@ public class Robot extends IterativeRobot {
 		CANTalon rearLeft;
 		CANTalon rearRight;
 		Ultrasonic ultrasonic;
+		AnalogInput ultra;
+		Encoder vater;
 		
 	    final int joystickChannel	= 0;
 	    
@@ -62,8 +66,10 @@ public class Robot extends IterativeRobot {
     	 rearRight = new CANTalon(2);
     	 rearLeft = new CANTalon(3);
          robotDrive = new RobotDrive(frontLeft, rearLeft, frontRight, rearRight);
+         vater = new Encoder(0);
          
-         ultrasonic = new Ultrasonic(1,2);
+         ultrasonic = new Ultrasonic(0,1);
+         ultra = new AnalogInput(0);
         
         stick = new Joystick(joystickChannel);
         
@@ -88,12 +94,36 @@ public class Robot extends IterativeRobot {
             LiveWindow.addSensor("IMU", "Gyro", imu);
         }
         first_iteration = true;
+        
+        drivetime.start();
     }
+    
+    public double MarcsDeltaT(double tfinal, double tinitial){
+    	if (tfinal == 0){
+    		return 0;
+    	}
+    	return tfinal-tinitial;
+    	
+    }
+    
+    public double MarcsVelocity(double instaneousACC, double previousVEL, double deltaT){
+    	
+    	return previousVEL+(instaneousACC*deltaT);
+    	
+    }
+    
+    public double MarcsDisplacement(double instaneousACC, double instaneousVEL, double previousDIS, double deltaT){
+    	
+    	return previousDIS + (instaneousVEL*deltaT) + (0.5*instaneousACC*deltaT*deltaT);
+    	
+    }
+    
     public double distance(double accelerationInitial, double accelerationFinal, double timeInitial, double timeFinal,double velocityInitial ) {
     	double avgAcc=(accelerationInitial+accelerationFinal)/2;
     	double changeInTime=timeFinal-timeInitial;
     	return velocityInitial+.5*avgAcc*changeInTime*changeInTime;
     }
+    
     public double velocity(double initialVeloc,double accelerationInitial,double accelerationFinal,double timeInitial,double timeFinal){
     	double avgAcc=(accelerationInitial+accelerationFinal)/2;
     	double changeInTime=timeFinal-timeInitial;
@@ -109,8 +139,14 @@ public class Robot extends IterativeRobot {
     double initialVelocX=0;
 	Timer drivetime = new Timer();
 	
+	double Marcstime = 0;
+	double Marcsprevtime = 0;
+	double MarcsinstantACC = 0;
+	double MarcsinstantVEL = 0;
+	double MarcsinstantDIS = 0;
+	
     public void autonomousInit(){
-    	drivetime.start();
+    	//drivetime.start();
     	SmartDashboard.putBoolean("autoinit", true);
     	initialTime=-1;
     	initialVelocX=0;
@@ -119,6 +155,8 @@ public class Robot extends IterativeRobot {
     	previousAccelerationY=0;
     	autoDistanceX=0;
     	autoDistanceY=0;
+    	
+    	
     }
     public void autonomousPeriodic() {
     	if(previousTime==-1) previousTime=drivetime.get();
@@ -150,14 +188,15 @@ public class Robot extends IterativeRobot {
     	previousAccelerationY=imu.getWorldLinearAccelY();
     	previousTime=drivetime.get();
     }
-
+    
     /**
      * Runs the motors with arcade steering.
      */
     public void teleopPeriodic() {
         robotDrive.setSafetyEnabled(false);
         while (isOperatorControl() && isEnabled()) {
-        	
+        	 SmartDashboard.putNumber( "Ultrasonic_Inches", ultrasonic.getRangeInches());
+             SmartDashboard.putNumber( "Ultra_inches", ultra.getVoltage()* 39.37);
         	
         	//gyro code>>>>
         	// When calibration has completed, zero the yaw
@@ -171,7 +210,8 @@ public class Robot extends IterativeRobot {
                 imu.zeroYaw();
                 first_iteration = false;
             }
-            SmartDashboard.putNumber( "Ultrasonic_Inches", ultrasonic.getRangeInches());
+           
+
             // Update the dashboard with status and orientation
             // data from the nav6 IMU
             
@@ -192,11 +232,41 @@ public class Robot extends IterativeRobot {
             SmartDashboard.putNumber(   "IMU_Accel_Y",          imu.getWorldLinearAccelY());
             SmartDashboard.putBoolean(  "IMU_IsMoving",         imu.isMoving());
             SmartDashboard.putNumber(   "IMU_Temp_C",           imu.getTempC());
-            Timer.delay(0.2);
+            //Timer.delay(0.01);
             
         
-        
-     
+            //start of marc edited code
+            
+            //time
+            Marcstime = drivetime.get();
+            
+            //acceleration
+            if (Math.abs(imu.getWorldLinearAccelX())>.05){
+            	MarcsinstantACC = imu.getWorldLinearAccelX();
+            }
+            else{
+            	MarcsinstantACC = 0;
+            }
+            
+            //velocity
+            if(imu.isMoving())
+            	MarcsinstantVEL = MarcsVelocity(MarcsinstantACC, MarcsinstantVEL, MarcsDeltaT(Marcstime, Marcsprevtime));
+            else{
+            	MarcsinstantVEL = 0;
+            }
+            
+            //distance
+            MarcsinstantDIS = MarcsDisplacement(MarcsinstantACC, MarcsinstantVEL, MarcsinstantDIS, MarcsDeltaT(Marcstime, Marcsprevtime));
+            
+            //time reset and output
+            SmartDashboard.putNumber(   "Marc's DeltaT",          MarcsDeltaT(Marcstime, Marcsprevtime));
+            
+            Marcsprevtime = Marcstime;
+            
+            SmartDashboard.putNumber(   "Marc's Velocity Calculation",          MarcsinstantVEL);
+            SmartDashboard.putNumber(   "Marc's Displacement Calculation",          MarcsinstantDIS);
+            
+            //end of marc edited code
     
     /**
      * This function is called once each time the robot enters test mode.
