@@ -11,7 +11,7 @@ package com.usfirst.team5240.nav6.frc;
 
 import java.util.Arrays;
 
-import com.kauailabs.nav6.IMUProtocol;
+import com.usfirst.team5240.nav6.frc.IMUProtocol;
 
 import edu.wpi.first.wpilibj.SerialPort;
 

@@ -9,6 +9,7 @@ import com.usfirst.team5240.nav6.frc.IMUAdvanced;
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.buttons.JoystickButton;
  
 
 
@@ -33,33 +34,43 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 public class Robot extends SampleRobot {
 	
 	 RobotDrive robotDrive;
-	    Joystick stick;
+	    //Joystick stick;
+	    Joystick DriverStick1;
+	    Joystick DriverStick2;
+	    Joystick OperatorPad;
+	    JoystickButton VaderUp;
 	    CANTalon frontRight;
 	    // Channels for the wheels
 		CANTalon frontLeft;
 		CANTalon rearLeft;
 		CANTalon rearRight;
+		CANTalon elevator;
 		
-	    final int joystickChannel	= 0;
-	    
-	    //<Gyro code start
+	    final int DriverStick1Channel	= 0;
+	    final int DriverStick2Channel   = 1;
+	    final int OperatorPadChannel = 2;
 	    SerialPort serial_port;
-	    //IMU imu;  // Alternatively, use IMUAdvanced for advanced features
 	    IMUAdvanced imu;
 	    boolean first_iteration;
-	    //Gyro code stop
-
 	    
-
-    public Robot() {
-    	 frontRight = new CANTalon(1);
-    	 frontLeft = new CANTalon(4);
-    	 rearRight = new CANTalon(2);
-    	 rearLeft = new CANTalon(3);
-         robotDrive = new RobotDrive(frontLeft, rearLeft, frontRight, rearRight);
+	   
+	    public Robot() {
+	    	frontRight = new CANTalon(1);
+	    	frontLeft = new CANTalon(4);
+    	 	rearRight = new CANTalon(2);
+    	 	rearLeft = new CANTalon(3);
+    	 	elevator = new CANTalon(5);
+    	 	robotDrive = new RobotDrive(frontLeft, rearLeft, frontRight, rearRight);
+    	 	
+         
+         
         
-        stick = new Joystick(joystickChannel);
-        
+    	 	DriverStick2 = new Joystick(DriverStick1Channel);
+    	 	DriverStick1 = new Joystick(DriverStick2Channel);
+    	 	OperatorPad  = new Joystick(OperatorPadChannel );
+    	 	VaderUp      = new JoystickButton(OperatorPad(2));
+    	 	
+    	 	
         try {
         serial_port = new SerialPort(57600,SerialPort.Port.kMXP);
                 
@@ -85,14 +96,12 @@ public class Robot extends SampleRobot {
         
     
 
-    public void autonomous() {
+	    public void autonomous() {
        
     }
 
-    /**
-     * Runs the motors with arcade steering.
-     */
-    public void operatorControl() {
+
+	    public void operatorControl() {
         robotDrive.setSafetyEnabled(false);
         while (isOperatorControl() && isEnabled()) {
         	
@@ -132,17 +141,9 @@ public class Robot extends SampleRobot {
             
             Timer.delay(0.2);
         }
-        
-     
-    
-    /**
-     * This function is called once each time the robot enters test mode.
-     */
-        	//frontRight.set(stick.getY());
-        	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
-        	// This sample does not use field-oriented drive, so the gyro input is set to zero.
-            robotDrive.mecanumDrive_Cartesian(stick.getRawAxis(3)-stick.getRawAxis(2),stick.getRawAxis(4), stick.getRawAxis(5), 0);
- 
+
+            robotDrive.mecanumDrive_Cartesian(DriverStick1.getRawAxis(3)-DriverStick2.getRawAxis(2),DriverStick1.getRawAxis(4), DriverStick2.getRawAxis(5), imu.getPitch());
+            elevator.set(OperatorPadChannel);
             Timer.delay(0.01);	// wait 5ms to avoid hogging CPU cycles
         }
            
