@@ -5,11 +5,16 @@ import edu.wpi.first.wpilibj.RobotDrive;
 import edu.wpi.first.wpilibj.SampleRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.CANTalon;
+
 import com.usfirst.team5240.nav6.frc.IMUAdvanced;
+
 import edu.wpi.first.wpilibj.SerialPort;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.buttons.JoystickButton;
+
+import edu.wpi.first.wpilibj.buttons.Button;
+
  
 
 
@@ -34,21 +39,47 @@ import edu.wpi.first.wpilibj.buttons.JoystickButton;
 public class Robot extends SampleRobot {
 	
 	 RobotDrive robotDrive;
-	    //Joystick stick;
 	    Joystick DriverStick1;
 	    Joystick DriverStick2;
 	    Joystick OperatorPad;
-	    JoystickButton VaderUp;
+	    Joystick VaderUp;
+	    Joystick VaderDown;
+	    Button VaderForkOut;
+	    Button VaderForkIn ;
+	    
+	    
 	    CANTalon frontRight;
-	    // Channels for the wheels
-		CANTalon frontLeft;
+	    CANTalon frontLeft;
 		CANTalon rearLeft;
 		CANTalon rearRight;
-		CANTalon elevator;
+		CANTalon elevator1;
+		CANTalon elevator2;
+		CANTalon VaderFork1;
+		CANTalon VaderFork2;
 		
 	    final int DriverStick1Channel	= 0;
 	    final int DriverStick2Channel   = 1;
 	    final int OperatorPadChannel = 2;
+	   
+//	    Speed in which we strafe
+	    final int strafeSpeed = 1;
+//	    drivetrainSpeed
+	    final int speed = 1;
+//	    Vader controlling axis
+	    final int vaderAxis = 1;
+	    
+//	    eleVADER speed
+	    final int vaderUpSpeed = 1;
+	    final int vaderDownSpeed = 1;
+	    
+//	    The Vader Fork controlling axis
+	    final int vaderForkOutAxis = 2;
+	    final int vaderForkInAxis = 3;
+//	    Speed in which we hella vader fork
+	    final int vaderForkInSpeed = 1;
+	    final int vaderForkOutSpeed = 1;
+	    
+	    
 	    SerialPort serial_port;
 	    IMUAdvanced imu;
 	    boolean first_iteration;
@@ -59,7 +90,10 @@ public class Robot extends SampleRobot {
 	    	frontLeft = new CANTalon(4);
     	 	rearRight = new CANTalon(2);
     	 	rearLeft = new CANTalon(3);
-    	 	elevator = new CANTalon(5);
+    	 	elevator1 = new CANTalon(5);
+    	 	elevator2 = new CANTalon(6);
+    	 	VaderFork1 = new CANTalon(7);
+    	 	VaderFork2 = new CANTalon(8);
     	 	robotDrive = new RobotDrive(frontLeft, rearLeft, frontRight, rearRight);
     	 	
          
@@ -68,8 +102,6 @@ public class Robot extends SampleRobot {
     	 	DriverStick2 = new Joystick(DriverStick1Channel);
     	 	DriverStick1 = new Joystick(DriverStick2Channel);
     	 	OperatorPad  = new Joystick(OperatorPadChannel );
-    	 	VaderUp      = new JoystickButton(OperatorPad(2));
-    	 	
     	 	
         try {
         serial_port = new SerialPort(57600,SerialPort.Port.kMXP);
@@ -93,6 +125,10 @@ public class Robot extends SampleRobot {
         }
         first_iteration = true;
     }
+
+	    	
+	    	
+	    
         
     
 
@@ -102,8 +138,14 @@ public class Robot extends SampleRobot {
 
 
 	    public void operatorControl() {
+	    	
+	    	
+	    	
         robotDrive.setSafetyEnabled(false);
+        
         while (isOperatorControl() && isEnabled()) {
+        	
+        	
         	
         	//gyro code>>>>
         	// When calibration has completed, zero the yaw
@@ -140,12 +182,36 @@ public class Robot extends SampleRobot {
             SmartDashboard.putNumber(   "IMU_Temp_C",           imu.getTempC());
             
             Timer.delay(0.2);
+            
+            
         }
 
-            robotDrive.mecanumDrive_Cartesian(DriverStick1.getRawAxis(3)-DriverStick2.getRawAxis(2),DriverStick1.getRawAxis(4), DriverStick2.getRawAxis(5), imu.getPitch());
-            elevator.set(OperatorPadChannel);
+            robotDrive.mecanumDrive_Cartesian(DriverStick1.getRawAxis(3)*strafeSpeed-DriverStick2.getRawAxis(2)*
+            		strafeSpeed,DriverStick1.getRawAxis(4)*speed, DriverStick2.getRawAxis(5)*speed, imu.getPitch());
+            
+//            vader going up control
+            elevator1.set(OperatorPad.getRawAxis(vaderAxis)*vaderUpSpeed);
+            elevator2.set(OperatorPad.getRawAxis(vaderAxis)*vaderUpSpeed);
+//            vader going down contorl
+            elevator2.set(OperatorPad.getRawAxis(vaderAxis)*vaderDownSpeed);
+            elevator1.set(OperatorPad.getRawAxis(vaderAxis)*vaderDownSpeed);
+            
+            
+            
+            
+//            vaderForks controlled going in 
+            VaderFork1.set(OperatorPad.getRawAxis(vaderForkInAxis)*vaderForkInSpeed);
+            VaderFork2.set(OperatorPad.getRawAxis(vaderForkInAxis)*vaderForkInSpeed);
+//            vaderForks controlled going out
+            VaderFork1.set(OperatorPad.getRawAxis(vaderForkOutAxis)*vaderForkOutSpeed);
+            VaderFork2.set(OperatorPad.getRawAxis(vaderForkOutAxis)*vaderForkOutSpeed);
+            
+            
+            
+            
+            
             Timer.delay(0.01);	// wait 5ms to avoid hogging CPU cycles
-        }
+}
            
     
 
@@ -153,6 +219,7 @@ public class Robot extends SampleRobot {
      * Runs during test mode
      */
     public void test() {
+    	
     }
 
 
